@@ -6,6 +6,10 @@
     "dependency-check": "./dependency-check.ts"
   },
   "type": "module",
+  "scripts": {
+    "format": "biome format --write .",
+    "format:check": "biome format ."
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
