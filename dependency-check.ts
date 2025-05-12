@@ -14,6 +14,7 @@ interface CheckOptions {
 	package_type: "internal_lib" | "bundled_lib";
 	peer_deps_should_be_asterisk: boolean;
 	additional_internal_modules?: string[];
+	ignore_packages?: string[];
 }
 
 // Default options
@@ -21,6 +22,7 @@ const defaultOptions: CheckOptions = {
 	package_type: "internal_lib",
 	peer_deps_should_be_asterisk: true,
 	additional_internal_modules: [],
+	ignore_packages: [],
 };
 
 /**
@@ -78,7 +80,10 @@ function checkDependencies(
 		if (options.package_type === "internal_lib") {
 			// Check regular dependencies for internal packages
 			for (const [dep, version] of Object.entries(dependencies)) {
-				if (isInternalModule(dep, options.additional_internal_modules)) {
+				if (
+					isInternalModule(dep, options.additional_internal_modules) &&
+					!options.ignore_packages?.includes(dep)
+				) {
 					result.success = false;
 					result.errors.push(
 						`Internal module "${dep}" found in dependencies. It should be in peerDependencies or devDependencies.`,
@@ -91,7 +96,8 @@ function checkDependencies(
 				for (const [dep, version] of Object.entries(peerDependencies)) {
 					if (
 						isInternalModule(dep, options.additional_internal_modules) &&
-						version !== "*"
+						version !== "*" &&
+						!options.ignore_packages?.includes(dep)
 					) {
 						result.success = false;
 						result.errors.push(
@@ -103,7 +109,10 @@ function checkDependencies(
 		} else if (options.package_type === "bundled_lib") {
 			// For bundled_lib, no internal package should be in dependencies or peerDependencies
 			for (const [dep, version] of Object.entries(dependencies)) {
-				if (isInternalModule(dep, options.additional_internal_modules)) {
+				if (
+					isInternalModule(dep, options.additional_internal_modules) &&
+					!options.ignore_packages?.includes(dep)
+				) {
 					result.success = false;
 					result.errors.push(
 						`Internal module "${dep}" found in dependencies. Bundled libs cannot have internal dependencies.`,
@@ -112,7 +121,10 @@ function checkDependencies(
 			}
 
 			for (const [dep, version] of Object.entries(peerDependencies)) {
-				if (isInternalModule(dep, options.additional_internal_modules)) {
+				if (
+					isInternalModule(dep, options.additional_internal_modules) &&
+					!options.ignore_packages?.includes(dep)
+				) {
 					result.success = false;
 					result.errors.push(
 						`Internal module "${dep}" found in peerDependencies. Bundled libs cannot have internal peer dependencies.`,
@@ -145,11 +157,16 @@ async function main() {
 		const additionalInternalModules = additionalInternalModulesStr
 			? additionalInternalModulesStr.split(",").map((s) => s.trim())
 			: [];
+		const ignorePackagesStr = process.env.INPUT_IGNORE_PACKAGES || "";
+		const ignorePackages = ignorePackagesStr
+			? ignorePackagesStr.split(",").map((s) => s.trim())
+			: [];
 
 		const options: CheckOptions = {
 			package_type: packageType as "internal_lib" | "bundled_lib",
 			peer_deps_should_be_asterisk: peerDepsAsterisk,
 			additional_internal_modules: additionalInternalModules,
+			ignore_packages: ignorePackages,
 		};
 
 		// Get the workspace directory
