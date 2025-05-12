@@ -5,6 +5,7 @@ import path from "node:path"
 
 // List of internal packages that should be treated as internal modules
 const INTERNAL_PACKAGE_LIST: string[] = [
+  "schematic-symbols",
   // Add your internal packages here
   // Example: "@tscircuit/core",
   // Example: "@tscircuit/schematic",
