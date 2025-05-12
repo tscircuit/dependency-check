@@ -132,7 +132,6 @@ function checkDependencies(
         }
       }
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   } catch (error: any) {
     result.success = false
     result.errors.push(
@@ -188,7 +187,6 @@ async function main() {
     } else {
       console.log("✅ All dependency checks passed!")
     }
-    // biome-ignore lint/suspicious/noExplicitAny: <explanation>
   } catch (error: any) {
     console.error("❌ An error occurred:", error.message)
     process.exit(1)
