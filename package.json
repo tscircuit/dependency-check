@@ -1,0 +1,15 @@
+{
+  "name": "@tscircuit/dependency-check",
+  "version": "0.0.1",
+  "module": "./dependency-check.ts",
+  "bin": {
+    "dependency-check": "./dependency-check.ts"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
