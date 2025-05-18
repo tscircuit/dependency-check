@@ -13,6 +13,7 @@ const INTERNAL_PACKAGE_LIST: string[] = [
 
 interface CheckOptions {
   package_type: "internal_lib" | "bundled_lib"
+  // This option is kept for backward compatibility, but for internal modules it's always enforced
   peer_deps_should_be_asterisk: boolean
   additional_internal_modules?: string[]
   ignore_packages?: string[]
@@ -92,19 +93,25 @@ function checkDependencies(
         }
       }
 
-      // Check peer dependencies version format if required
-      if (options.peer_deps_should_be_asterisk) {
-        for (const [dep, version] of Object.entries(peerDependencies)) {
-          if (
-            isInternalModule(dep, options.additional_internal_modules) &&
-            version !== "*" &&
-            !options.ignore_packages?.includes(dep)
-          ) {
-            result.success = false
-            result.errors.push(
-              `Internal module "${dep}" in peerDependencies should use "*" as version.`,
-            )
-          }
+      // For internal modules, always enforce the "*" version requirement
+      // For non-internal modules, respect the peer_deps_should_be_asterisk option
+      for (const [dep, version] of Object.entries(peerDependencies)) {
+        const isInternal = isInternalModule(
+          dep,
+          options.additional_internal_modules,
+        )
+
+        // For internal modules OR when the option is enabled
+        if (
+          (isInternal || options.peer_deps_should_be_asterisk) &&
+          version !== "*" &&
+          !options.ignore_packages?.includes(dep)
+        ) {
+          result.success = false
+          const message = isInternal
+            ? `Internal module "${dep}" in peerDependencies must use "*" as version.`
+            : `Module "${dep}" in peerDependencies should use "*" as version.`
+          result.errors.push(message)
         }
       }
     } else if (options.package_type === "bundled_lib") {
@@ -149,6 +156,7 @@ async function main() {
     // Find the GitHub Action inputs if running as an action
     const packageType =
       process.env.INPUT_PACKAGE_TYPE || defaultOptions.package_type
+    // For internal modules, this is always enforced regardless of this setting
     const peerDepsAsterisk =
       process.env.INPUT_PEER_DEPS_SHOULD_BE_ASTERISK === "true" ||
       defaultOptions.peer_deps_should_be_asterisk
