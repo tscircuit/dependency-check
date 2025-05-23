@@ -23,6 +23,11 @@ A module is considered "internal" if:
 You can modify this repo's `INTERNAL_PACKAGE_LIST` in the `dependency-check.ts` file
 to add internal packages to the list of internal packages.
 
+### No Circular Dependency Rule
+
+![image](https://github.com/user-attachments/assets/e41986fe-2556-4e69-964f-de6ceaac6736)
+
+
 ## Usage
 
 ### Basic usage in your GitHub workflow:
