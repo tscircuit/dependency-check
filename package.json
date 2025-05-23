@@ -1,6 +1,6 @@
 {
   "name": "@tscircuit/dependency-check",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "module": "./dependency-check.ts",
   "bin": {
     "dependency-check": "./dependency-check.ts"
