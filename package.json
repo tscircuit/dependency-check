@@ -1,6 +1,10 @@
 {
   "name": "@tscircuit/dependency-check",
   "version": "0.0.6",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tscircuit/dependency-check.git"
+  },
   "module": "./dependency-check.ts",
   "bin": {
     "dependency-check": "./dependency-check.ts"
