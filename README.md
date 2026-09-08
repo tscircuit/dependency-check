@@ -67,8 +67,10 @@ jobs:
 | Option                         | Description                                                        | Default        |
 | ------------------------------ | ------------------------------------------------------------------ | -------------- |
 | `package_type`                 | Type of package, either `internal_lib` or `bundled_lib`            | `internal_lib` |
-| `peer_deps_should_be_asterisk` | Force all peer dependencies to use an asterisk for the version     | `false`        |
+| `peer_deps_should_be_asterisk` | Force internal peer dependencies to use an asterisk for the version | `true`         |
 | `additional_internal_modules`  | Comma-separated list of additional modules to consider as internal | `''`           |
+
+Set `peer_deps_should_be_asterisk` to `"false"` to allow versioned internal peer dependencies. When the corresponding `INPUT_PEER_DEPS_SHOULD_BE_ASTERISK` environment variable is omitted or empty, the script keeps the enabled default. Disabling this option does not change the rules for internal packages in regular dependencies or bundled libraries.
 
 ## Publishing the package
 
