@@ -149,9 +149,11 @@ async function main() {
     // Find the GitHub Action inputs if running as an action
     const packageType =
       process.env.INPUT_PACKAGE_TYPE || defaultOptions.package_type
+    const peerDepsAsteriskInput = process.env.INPUT_PEER_DEPS_SHOULD_BE_ASTERISK
     const peerDepsAsterisk =
-      process.env.INPUT_PEER_DEPS_SHOULD_BE_ASTERISK === "true" ||
-      defaultOptions.peer_deps_should_be_asterisk
+      peerDepsAsteriskInput === "true" ||
+      (peerDepsAsteriskInput !== "false" &&
+        defaultOptions.peer_deps_should_be_asterisk)
     const additionalInternalModulesStr =
       process.env.INPUT_ADDITIONAL_INTERNAL_MODULES || ""
     const additionalInternalModules = additionalInternalModulesStr
