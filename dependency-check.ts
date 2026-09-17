@@ -11,6 +11,8 @@ const INTERNAL_PACKAGE_LIST: string[] = [
   // Example: "@tscircuit/schematic",
 ]
 
+const PUBLIC_TSCIRCUIT_PACKAGES = new Set(["tscircuit"])
+
 interface CheckOptions {
   package_type: "internal_lib" | "bundled_lib"
   peer_deps_should_be_asterisk: boolean
@@ -33,6 +35,10 @@ function isInternalModule(
   packageName: string,
   additionalModules: string[] = [],
 ): boolean {
+  if (PUBLIC_TSCIRCUIT_PACKAGES.has(packageName)) {
+    return false
+  }
+
   // Check if it's in the INTERNAL_PACKAGE_LIST
   if (INTERNAL_PACKAGE_LIST.includes(packageName)) {
     return true
@@ -59,7 +65,7 @@ function isInternalModule(
 /**
  * Check package.json dependencies against the rules
  */
-function checkDependencies(
+export function checkDependencies(
   packageJsonPath: string,
   options: CheckOptions = defaultOptions,
 ): { success: boolean; errors: string[] } {
@@ -86,8 +92,12 @@ function checkDependencies(
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
+          const dependencyMessage =
+            "tscircuit" in dependencies
+              ? ` The "tscircuit" package already includes internal dependencies; add "${dep}" to ignore_packages only if this repo intentionally installs it separately.`
+              : ""
           result.errors.push(
-            `Internal module "${dep}" found in dependencies. It should be in peerDependencies or devDependencies.`,
+            `Internal module "${dep}" found in dependencies. It should be in peerDependencies or devDependencies.${dependencyMessage}`,
           )
         }
       }
@@ -194,4 +204,8 @@ async function main() {
   }
 }
 
-main()
+if (import.meta.main) {
+  main()
+}
+
+export { isInternalModule }
