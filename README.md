@@ -70,6 +70,10 @@ jobs:
 | `peer_deps_should_be_asterisk` | Force all peer dependencies to use an asterisk for the version     | `false`        |
 | `additional_internal_modules`  | Comma-separated list of additional modules to consider as internal | `''`           |
 
+An unsupported `package_type` causes the check to fail with an error instead of
+skipping the dependency rules. An omitted or empty `INPUT_PACKAGE_TYPE` keeps the
+default `internal_lib` behavior.
+
 ## Publishing the package
 
 1. Organize the files:
