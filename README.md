@@ -14,6 +14,9 @@ This action enforces the following rules:
 2. **For `bundled_lib` package type:**
    - No internal package should be in dependencies or peerDependencies.
 
+Both package types apply their regular-dependency rules to `optionalDependencies`
+too. The `ignore_packages` exception applies to both sections.
+
 A module is considered "internal" if:
 
 - It has the prefix `@tscircuit/*`

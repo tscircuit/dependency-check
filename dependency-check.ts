@@ -73,21 +73,29 @@ function checkDependencies(
     // Get dependencies sections
     const {
       dependencies = {},
+      optionalDependencies = {},
       peerDependencies = {},
       devDependencies = {},
     } = packageJson
+    const runtimeDependencies = new Map([
+      ...Object.entries(dependencies),
+      ...Object.entries(optionalDependencies),
+    ])
 
     // Check based on package_type
     if (options.package_type === "internal_lib") {
       // Check regular dependencies for internal packages
-      for (const [dep, version] of Object.entries(dependencies)) {
+      for (const [dep, version] of runtimeDependencies) {
         if (
           isInternalModule(dep, options.additional_internal_modules) &&
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
+          const section = Object.hasOwn(optionalDependencies, dep)
+            ? "optionalDependencies"
+            : "dependencies"
           result.errors.push(
-            `Internal module "${dep}" found in dependencies. It should be in peerDependencies or devDependencies.`,
+            `Internal module "${dep}" found in ${section}. It should be in peerDependencies or devDependencies.`,
           )
         }
       }
@@ -109,14 +117,17 @@ function checkDependencies(
       }
     } else if (options.package_type === "bundled_lib") {
       // For bundled_lib, no internal package should be in dependencies or peerDependencies
-      for (const [dep, version] of Object.entries(dependencies)) {
+      for (const [dep, version] of runtimeDependencies) {
         if (
           isInternalModule(dep, options.additional_internal_modules) &&
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
+          const section = Object.hasOwn(optionalDependencies, dep)
+            ? "optionalDependencies"
+            : "dependencies"
           result.errors.push(
-            `Internal module "${dep}" found in dependencies. Bundled libs cannot have internal dependencies.`,
+            `Internal module "${dep}" found in ${section}. Bundled libs cannot have internal dependencies.`,
           )
         }
       }
