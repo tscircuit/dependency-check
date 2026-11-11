@@ -23,6 +23,14 @@ A module is considered "internal" if:
 You can modify this repo's `INTERNAL_PACKAGE_LIST` in the `dependency-check.ts` file
 to add internal packages to the list of internal packages.
 
+For npm aliases, the check considers both the dependency key and the target
+package name. For example, `"helper": "npm:@tscircuit/core@^1.0.0"` is still an
+internal dependency. The same identity check applies in `peerDependencies`.
+When the asterisk rule is enabled, internal peers must still use the literal
+version string `*`; an npm alias specification does not satisfy that rule.
+An `ignore_packages` entry continues to refer to the dependency key, such as
+`helper` in this example.
+
 ### No Circular Dependency Rule
 
 ![image](https://github.com/user-attachments/assets/e41986fe-2556-4e69-964f-de6ceaac6736)

@@ -56,6 +56,27 @@ function isInternalModule(
   return false
 }
 
+function getNpmAliasPackageName(version: unknown): string | undefined {
+  if (typeof version !== "string") return undefined
+
+  const match = /^npm:((?:@[^/\s:@]+\/)?[^/\s:@]+)(?:@[\s\S]*)?$/i.exec(
+    version,
+  )
+  return match?.[1]
+}
+
+function isInternalDependency(
+  packageName: string,
+  version: unknown,
+  additionalModules: string[] = [],
+): boolean {
+  const aliasName = getNpmAliasPackageName(version)
+  return (
+    isInternalModule(packageName, additionalModules) ||
+    (aliasName !== undefined && isInternalModule(aliasName, additionalModules))
+  )
+}
+
 /**
  * Check package.json dependencies against the rules
  */
@@ -82,7 +103,11 @@ function checkDependencies(
       // Check regular dependencies for internal packages
       for (const [dep, version] of Object.entries(dependencies)) {
         if (
-          isInternalModule(dep, options.additional_internal_modules) &&
+          isInternalDependency(
+            dep,
+            version,
+            options.additional_internal_modules,
+          ) &&
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
@@ -96,7 +121,11 @@ function checkDependencies(
       if (options.peer_deps_should_be_asterisk) {
         for (const [dep, version] of Object.entries(peerDependencies)) {
           if (
-            isInternalModule(dep, options.additional_internal_modules) &&
+            isInternalDependency(
+              dep,
+              version,
+              options.additional_internal_modules,
+            ) &&
             version !== "*" &&
             !options.ignore_packages?.includes(dep)
           ) {
@@ -111,7 +140,11 @@ function checkDependencies(
       // For bundled_lib, no internal package should be in dependencies or peerDependencies
       for (const [dep, version] of Object.entries(dependencies)) {
         if (
-          isInternalModule(dep, options.additional_internal_modules) &&
+          isInternalDependency(
+            dep,
+            version,
+            options.additional_internal_modules,
+          ) &&
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
@@ -123,7 +156,11 @@ function checkDependencies(
 
       for (const [dep, version] of Object.entries(peerDependencies)) {
         if (
-          isInternalModule(dep, options.additional_internal_modules) &&
+          isInternalDependency(
+            dep,
+            version,
+            options.additional_internal_modules,
+          ) &&
           !options.ignore_packages?.includes(dep)
         ) {
           result.success = false
