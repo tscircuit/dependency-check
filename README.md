@@ -67,7 +67,7 @@ jobs:
 | Option                         | Description                                                        | Default        |
 | ------------------------------ | ------------------------------------------------------------------ | -------------- |
 | `package_type`                 | Type of package, either `internal_lib` or `bundled_lib`            | `internal_lib` |
-| `peer_deps_should_be_asterisk` | Force all peer dependencies to use an asterisk for the version     | `false`        |
+| `peer_deps_should_be_asterisk` | Force all peer dependencies to use an asterisk for the version     | `true`         |
 | `additional_internal_modules`  | Comma-separated list of additional modules to consider as internal | `''`           |
 
 ## Publishing the package

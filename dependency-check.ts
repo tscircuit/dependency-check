@@ -11,7 +11,7 @@ const INTERNAL_PACKAGE_LIST: string[] = [
   // Example: "@tscircuit/schematic",
 ]
 
-interface CheckOptions {
+export interface CheckOptions {
   package_type: "internal_lib" | "bundled_lib"
   peer_deps_should_be_asterisk: boolean
   additional_internal_modules?: string[]
@@ -19,7 +19,7 @@ interface CheckOptions {
 }
 
 // Default options
-const defaultOptions: CheckOptions = {
+export const defaultOptions: CheckOptions = {
   package_type: "internal_lib",
   peer_deps_should_be_asterisk: true,
   additional_internal_modules: [],
@@ -29,7 +29,7 @@ const defaultOptions: CheckOptions = {
 /**
  * Checks if a package is considered an internal module
  */
-function isInternalModule(
+export function isInternalModule(
   packageName: string,
   additionalModules: string[] = [],
 ): boolean {
@@ -56,10 +56,101 @@ function isInternalModule(
   return false
 }
 
+function parseJsonWithTrailingCommas(content: string): any {
+  const sanitized = content.replace(/,(\s*[}\]])/g, "$1")
+  return JSON.parse(sanitized)
+}
+
+function checkLockfilePeerDependencies(
+  bunLockPath: string,
+  options: CheckOptions,
+  errors: string[],
+): boolean {
+  if (!fs.existsSync(bunLockPath)) {
+    return true
+  }
+
+  let success = true
+  try {
+    const bunLockContent = fs.readFileSync(bunLockPath, "utf-8")
+    const bunLock = parseJsonWithTrailingCommas(bunLockContent)
+    const rootWorkspace = bunLock?.workspaces?.[""]
+    if (!rootWorkspace) {
+      return true
+    }
+
+    const {
+      dependencies = {},
+      peerDependencies = {},
+    }: {
+      dependencies?: Record<string, string>
+      peerDependencies?: Record<string, string>
+    } = rootWorkspace
+
+    if (options.package_type === "internal_lib") {
+      for (const [dep] of Object.entries(dependencies)) {
+        if (
+          isInternalModule(dep, options.additional_internal_modules) &&
+          !options.ignore_packages?.includes(dep)
+        ) {
+          success = false
+          errors.push(
+            `Internal module "${dep}" found in bun.lock dependencies. It should be in peerDependencies or devDependencies.`,
+          )
+        }
+      }
+
+      if (options.peer_deps_should_be_asterisk) {
+        for (const [dep, version] of Object.entries(peerDependencies)) {
+          if (
+            isInternalModule(dep, options.additional_internal_modules) &&
+            version !== "*" &&
+            !options.ignore_packages?.includes(dep)
+          ) {
+            success = false
+            errors.push(
+              `Internal module "${dep}" in bun.lock peerDependencies should use "*" as version.`,
+            )
+          }
+        }
+      }
+    } else if (options.package_type === "bundled_lib") {
+      for (const [dep] of Object.entries(dependencies)) {
+        if (
+          isInternalModule(dep, options.additional_internal_modules) &&
+          !options.ignore_packages?.includes(dep)
+        ) {
+          success = false
+          errors.push(
+            `Internal module "${dep}" found in bun.lock dependencies. Bundled libs cannot have internal dependencies.`,
+          )
+        }
+      }
+
+      for (const [dep] of Object.entries(peerDependencies)) {
+        if (
+          isInternalModule(dep, options.additional_internal_modules) &&
+          !options.ignore_packages?.includes(dep)
+        ) {
+          success = false
+          errors.push(
+            `Internal module "${dep}" found in bun.lock peerDependencies. Bundled libs cannot have internal peer dependencies.`,
+          )
+        }
+      }
+    }
+  } catch (error: any) {
+    success = false
+    errors.push(`Error reading or parsing bun.lock: ${error.message}`)
+  }
+
+  return success
+}
+
 /**
- * Check package.json dependencies against the rules
+ * Check package.json (and adjacent bun.lock) dependencies against the rules
  */
-function checkDependencies(
+export function checkDependencies(
   packageJsonPath: string,
   options: CheckOptions = defaultOptions,
 ): { success: boolean; errors: string[] } {
@@ -80,7 +171,7 @@ function checkDependencies(
     // Check based on package_type
     if (options.package_type === "internal_lib") {
       // Check regular dependencies for internal packages
-      for (const [dep, version] of Object.entries(dependencies)) {
+      for (const [dep] of Object.entries(dependencies)) {
         if (
           isInternalModule(dep, options.additional_internal_modules) &&
           !options.ignore_packages?.includes(dep)
@@ -109,7 +200,7 @@ function checkDependencies(
       }
     } else if (options.package_type === "bundled_lib") {
       // For bundled_lib, no internal package should be in dependencies or peerDependencies
-      for (const [dep, version] of Object.entries(dependencies)) {
+      for (const [dep] of Object.entries(dependencies)) {
         if (
           isInternalModule(dep, options.additional_internal_modules) &&
           !options.ignore_packages?.includes(dep)
@@ -121,7 +212,7 @@ function checkDependencies(
         }
       }
 
-      for (const [dep, version] of Object.entries(peerDependencies)) {
+      for (const [dep] of Object.entries(peerDependencies)) {
         if (
           isInternalModule(dep, options.additional_internal_modules) &&
           !options.ignore_packages?.includes(dep)
@@ -133,6 +224,11 @@ function checkDependencies(
         }
       }
     }
+
+    const bunLockPath = path.join(path.dirname(packageJsonPath), "bun.lock")
+    if (!checkLockfilePeerDependencies(bunLockPath, options, result.errors)) {
+      result.success = false
+    }
   } catch (error: any) {
     result.success = false
     result.errors.push(
@@ -143,23 +239,48 @@ function checkDependencies(
   return result
 }
 
+export function resolvePeerDepsShouldBeAsterisk(
+  envValue: string | undefined,
+  defaultValue: boolean = defaultOptions.peer_deps_should_be_asterisk,
+): boolean {
+  if (envValue === undefined || envValue.trim() === "") {
+    return defaultValue
+  }
+  const normalized = envValue.trim().toLowerCase()
+  if (normalized === "false" || normalized === "0") {
+    return false
+  }
+  if (normalized === "true" || normalized === "1") {
+    return true
+  }
+  return defaultValue
+}
+
 // Main function
 async function main() {
   try {
     // Find the GitHub Action inputs if running as an action
     const packageType =
       process.env.INPUT_PACKAGE_TYPE || defaultOptions.package_type
-    const peerDepsAsterisk =
-      process.env.INPUT_PEER_DEPS_SHOULD_BE_ASTERISK === "true" ||
-      defaultOptions.peer_deps_should_be_asterisk
+    const peerDepsAsterisk = resolvePeerDepsShouldBeAsterisk(
+      process.env.INPUT_PEER_DEPS_SHOULD_BE_ASTERISK,
+    )
     const additionalInternalModulesStr =
-      process.env.INPUT_ADDITIONAL_INTERNAL_MODULES || ""
+      process.env.INPUT_ADDITIONAL_INTERNAL_MODULES ||
+      process.env.INPUT_ADDITIONAL_INTERNAL_PACKAGES ||
+      ""
     const additionalInternalModules = additionalInternalModulesStr
-      ? additionalInternalModulesStr.split(",").map((s) => s.trim())
+      ? additionalInternalModulesStr
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : []
     const ignorePackagesStr = process.env.INPUT_IGNORE_PACKAGES || ""
     const ignorePackages = ignorePackagesStr
-      ? ignorePackagesStr.split(",").map((s) => s.trim())
+      ? ignorePackagesStr
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
       : []
 
     const options: CheckOptions = {
@@ -194,4 +315,6 @@ async function main() {
   }
 }
 
-main()
+if (import.meta.main) {
+  main()
+}
